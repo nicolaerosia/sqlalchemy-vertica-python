@@ -1,5 +1,5 @@
 import re
-from sqlalchemy import types as sqltypes
+from sqlalchemy import types as sqltypes, text
 from sqlalchemy.dialects.postgresql.base import PGDialect
 from sqlalchemy.dialects.postgresql import INTERVAL
 from sqlalchemy.engine import reflection
@@ -107,7 +107,7 @@ class VerticaDialect(PGDialect):
     def has_schema(self, connection, schema):
         query = ("SELECT EXISTS (SELECT schema_name FROM v_catalog.schemata "
                  "WHERE schema_name='%s')") % (schema)
-        rs = connection.execute(query)
+        rs = connection.execute(text(query))
         return bool(rs.scalar())
 
 
@@ -119,7 +119,7 @@ class VerticaDialect(PGDialect):
                  "WHERE schema_name='%s' AND "
                  "table_name='%s'"
                  ")") % (schema, table_name)
-        rs = connection.execute(query)
+        rs = connection.execute(text(query))
         return bool(rs.scalar())
 
 
@@ -131,7 +131,7 @@ class VerticaDialect(PGDialect):
                  "WHERE sequence_schema='%s' AND "
                  "sequence_name='%s'"
                  ")") % (schema, sequence_name)
-        rs = connection.execute(query)
+        rs = connection.execute(text(query))
         return bool(rs.scalar())
 
 
@@ -140,7 +140,7 @@ class VerticaDialect(PGDialect):
                  "SELECT type_name FROM v_catalog.types "
                  "WHERE type_name='%s'"
                  ")") % (type_name)
-        rs = connection.execute(query)
+        rs = connection.execute(text(query))
         return bool(rs.scalar())
 
 
@@ -163,7 +163,7 @@ class VerticaDialect(PGDialect):
     @reflection.cache
     def get_schema_names(self, connection, **kw):
         query = "SELECT schema_name FROM v_catalog.schemata ORDER BY schema_name"
-        rs = connection.execute(query)
+        rs = connection.execute(text(query))
         return [row[0] for row in rs if not row[0].startswith('v_')]
 
 
@@ -176,7 +176,7 @@ class VerticaDialect(PGDialect):
         AND object_name = '{table_name}'
         {schema_conditional}
         """.format(table_name=table_name, schema_conditional=schema_conditional)
-        rs = connection.execute(query)
+        rs = connection.execute(text(query))
         return {"text": rs.scalar()}
 
 
@@ -314,7 +314,7 @@ class VerticaDialect(PGDialect):
              query += " AND table_schema = '" + schema + "'"
         query += " AND constraint_type = 'u'"
 
-        rs = connection.execute(query)
+        rs = connection.execute(text(query))
 
         unique_names = {row[1] for row in rs}
 
@@ -358,7 +358,7 @@ class VerticaDialect(PGDialect):
             {
                 'name': name,
                 'sqltext': src[1:-1]
-            } for name, src in connection.execute(query).fetchall()
+            } for name, src in connection.execute(text(query)).fetchall()
         ]
 
     # constraints are enforced on selects, but returning nothing for these
@@ -374,7 +374,7 @@ class VerticaDialect(PGDialect):
 
         cols = set()
         name = None
-        for row in connection.execute(query):
+        for row in connection.execute(text(query)):
              name = row[1] if name is None else name
              cols.add(row[2])
 
