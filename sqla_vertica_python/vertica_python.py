@@ -145,7 +145,7 @@ class VerticaDialect(PGDialect):
 
 
     def _get_server_version_info(self, connection):
-        v = connection.scalar("select version()")
+        v = connection.execute(text("select version()")).scalar()
         m = re.match(
             '.*Vertica Analytic Database '
             'v(\d+)\.(\d+)\.(\d)+.*',
@@ -157,7 +157,7 @@ class VerticaDialect(PGDialect):
 
 
     def _get_default_schema_name(self, connection):
-        return connection.scalar("select current_schema()")
+        return connection.execute(text("select current_schema()")).scalar()
 
 
     @reflection.cache
