@@ -88,7 +88,7 @@ class VerticaDialect(PGDialect):
         )
 
     @classmethod
-    def dbapi(cls):
+    def import_dbapi(cls):
         vp_module = __import__('vertica_python')
 
         # sqlalchemy expects to find the base Error class here,
