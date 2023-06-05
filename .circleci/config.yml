@@ -13,7 +13,7 @@ commands:
         type: string
     steps:
       - restore_cache:
-          key: deps-v1-<<parameters.python_version>>-{{ .Branch }}-{{ checksum "requirements.txt" }}-{{ checksum "setup.py" }}
+          key: deps-v2-<<parameters.python_version>>-{{ .Branch }}-{{ checksum "requirements.txt" }}-{{ checksum "setup.py" }}
       - run:
           name: Install python deps in venv
           command: |
@@ -30,7 +30,7 @@ commands:
             # '-e .' installation.
             pip install --progress-bar=off -e .
       - save_cache:
-          key: deps-v1-<<parameters.python_version>>-{{ .Branch }}-{{ checksum "requirements.txt" }}-{{ checksum "setup.py" }}
+          key: deps-v2-<<parameters.python_version>>-{{ .Branch }}-{{ checksum "requirements.txt" }}-{{ checksum "setup.py" }}
           paths:
             - "venv"
 
@@ -48,7 +48,7 @@ jobs:
         default: false
         description: "Enforce coverage not slipping"
     docker:
-      - image: circleci/python:<<parameters.python_version>>
+      - image: cimg/python:<<parameters.python_version>>
     steps:
       - checkout
       - installvenv:
@@ -78,9 +78,9 @@ jobs:
       python_version:
         type: string
         description: "Version of python to test against"
-        default: '3.6'
+        default: '3.8'
     docker:
-      - image: circleci/python:<<parameters.python_version>>
+      - image: cimg/python:<<parameters.python_version>>
     steps:
       - checkout
       - installvenv:
@@ -126,30 +126,6 @@ workflows:
       #
       # https://devguide.python.org/devcycle/#end-of-life-branches
       - test:
-          name: test-3.5
-          python_version: "3.5"
-          requires:
-            - test-3.8
-          filters:
-            tags:
-              only: /v\d+\.\d+\.\d+(-[\w]+)?/
-      - test:
-          name: test-3.6
-          python_version: "3.6"
-          requires:
-            - test-3.8
-          filters:
-            tags:
-              only: /v\d+\.\d+\.\d+(-[\w]+)?/
-      - test:
-          name: test-3.7
-          python_version: "3.7"
-          requires:
-            - test-3.8
-          filters:
-            tags:
-              only: /v\d+\.\d+\.\d+(-[\w]+)?/
-      - test:
           name: test-3.8
           python_version: "3.8"
           coverage: true
@@ -159,9 +135,6 @@ workflows:
       - deploy:
           context: PyPI
           requires:
-            - test-3.5
-            - test-3.6
-            - test-3.7
             - test-3.8
           filters:
             tags:
