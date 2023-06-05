@@ -6,7 +6,7 @@ import os.path
 import sys
 
 
-__version__ = '0.5.10'
+__version__ = 'v0.6.1'
 
 
 # From https://circleci.com/blog/continuously-deploying-python-packages-to-pypi-with-circleci/
