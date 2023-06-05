@@ -1,4 +1,5 @@
 import re
+from sqlalchemy import text
 from sqlalchemy import types as sqltypes
 from sqlalchemy.dialects.postgresql.base import PGDialect
 from sqlalchemy.dialects.postgresql import INTERVAL
@@ -88,7 +89,7 @@ class VerticaDialect(PGDialect):
         )
 
     @classmethod
-    def dbapi(cls):
+    def import_dbapi(cls):
         vp_module = __import__('vertica_python')
 
         # sqlalchemy expects to find the base Error class here,
@@ -96,6 +97,8 @@ class VerticaDialect(PGDialect):
         vp_module.Error = vp_module.errors.Error
 
         return vp_module
+    
+    dbapi = import_dbapi
 
 
     def create_connect_args(self, url):
@@ -107,7 +110,7 @@ class VerticaDialect(PGDialect):
     def has_schema(self, connection, schema):
         query = ("SELECT EXISTS (SELECT schema_name FROM v_catalog.schemata "
                  "WHERE schema_name='%s')") % (schema)
-        rs = connection.execute(query)
+        rs = connection.execute(text(query))
         return bool(rs.scalar())
 
 
@@ -119,7 +122,7 @@ class VerticaDialect(PGDialect):
                  "WHERE schema_name='%s' AND "
                  "table_name='%s'"
                  ")") % (schema, table_name)
-        rs = connection.execute(query)
+        rs = connection.execute(text(query))
         return bool(rs.scalar())
 
 
@@ -131,7 +134,7 @@ class VerticaDialect(PGDialect):
                  "WHERE sequence_schema='%s' AND "
                  "sequence_name='%s'"
                  ")") % (schema, sequence_name)
-        rs = connection.execute(query)
+        rs = connection.execute(text(query))
         return bool(rs.scalar())
 
 
@@ -140,12 +143,12 @@ class VerticaDialect(PGDialect):
                  "SELECT type_name FROM v_catalog.types "
                  "WHERE type_name='%s'"
                  ")") % (type_name)
-        rs = connection.execute(query)
+        rs = connection.execute(text(query))
         return bool(rs.scalar())
 
 
     def _get_server_version_info(self, connection):
-        v = connection.scalar("select version()")
+        v = connection.scalar(text("select version()"))
         m = re.match(
             '.*Vertica Analytic Database '
             'v(\d+)\.(\d+)\.(\d)+.*',
@@ -157,13 +160,13 @@ class VerticaDialect(PGDialect):
 
 
     def _get_default_schema_name(self, connection):
-        return connection.scalar("select current_schema()")
+        return connection.scalar(text("select current_schema()"))
 
 
     @reflection.cache
     def get_schema_names(self, connection, **kw):
         query = "SELECT schema_name FROM v_catalog.schemata ORDER BY schema_name"
-        rs = connection.execute(query)
+        rs = connection.execute(text(query))
         return [row[0] for row in rs if not row[0].startswith('v_')]
 
 
@@ -176,7 +179,7 @@ class VerticaDialect(PGDialect):
         AND object_name = '{table_name}'
         {schema_conditional}
         """.format(table_name=table_name, schema_conditional=schema_conditional)
-        rs = connection.execute(query)
+        rs = connection.execute(text(query))
         return {"text": rs.scalar()}
 
 
@@ -187,7 +190,7 @@ class VerticaDialect(PGDialect):
             s.append("WHERE table_schema = '%s'" % (schema,))
         s.append("ORDER BY table_schema, table_name")
 
-        rs = connection.execute(' '.join(s))
+        rs = connection.execute(text(' '.join(s)))
         return [row[0] for row in rs]
 
 
@@ -198,7 +201,7 @@ class VerticaDialect(PGDialect):
             s.append("WHERE table_schema = '%s'" % (schema,))
         s.append("ORDER BY table_schema, table_name")
 
-        rs = connection.execute(' '.join(s))
+        rs = connection.execute(text(' '.join(s)))
         return [row[0] for row in rs]
 
     @reflection.cache
@@ -212,7 +215,7 @@ class VerticaDialect(PGDialect):
         AND constraint_type = 'p'
         {schema_conditional}
         """.format(table_name=table_name, schema_conditional=schema_conditional)
-        primary_key_columns = tuple(row[0] for row in connection.execute(pk_column_select))
+        primary_key_columns = tuple(row[0] for row in connection.execute(text(pk_column_select)))
         column_select = """
         SELECT
           column_name,
@@ -238,9 +241,9 @@ class VerticaDialect(PGDialect):
         ORDER BY ordinal_position ASC
         """.format(table_name=table_name, schema_conditional=schema_conditional)
         colobjs = []
-        column_select_results = list(connection.execute(column_select))
-        for row in list(connection.execute(column_select)):
-            sequence_info = connection.execute("""
+        column_select_results = list(connection.execute(text(column_select)))
+        for row in list(connection.execute(text(column_select))):
+            sequence_info = connection.execute(text("""
                 SELECT
                 sequence_name as name,
                 minimum as start,
@@ -255,7 +258,7 @@ class VerticaDialect(PGDialect):
                         else "AND sequence_schema = '{schema}'".format(schema=schema)
                     )
                 )
-            ).first() if row.is_identity else None
+            )).first() if row.is_identity else None
 
             colobj = self._get_column_info(
                 row.column_name,
@@ -314,7 +317,7 @@ class VerticaDialect(PGDialect):
              query += " AND table_schema = '" + schema + "'"
         query += " AND constraint_type = 'u'"
 
-        rs = connection.execute(query)
+        rs = connection.execute(text(query))
 
         unique_names = {row[1] for row in rs}
 
@@ -358,7 +361,7 @@ class VerticaDialect(PGDialect):
             {
                 'name': name,
                 'sqltext': src[1:-1]
-            } for name, src in connection.execute(query).fetchall()
+            } for name, src in connection.execute(text(query)).fetchall()
         ]
 
     # constraints are enforced on selects, but returning nothing for these
@@ -374,7 +377,7 @@ class VerticaDialect(PGDialect):
 
         cols = set()
         name = None
-        for row in connection.execute(query):
+        for row in connection.execute(text(query)):
              name = row[1] if name is None else name
              cols.add(row[2])
 
